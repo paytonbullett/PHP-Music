@@ -1703,7 +1703,7 @@ function perform_full_scan($db) {
   echo "'Music Library' user ID: {$library_user_id}\n\n";
 
   echo "Step 3: Fetching existing music records from database...\n";
-  $stmt = $db->query("SELECT file, last_modified FROM music WHERE user_id = " . $library_user_id);
+  $stmt = $db->query("SELECT file, last_modified FROM music");
   $db_files = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
   echo "Found " . count($db_files) . " records in the database.\n\n";
 
@@ -1717,9 +1717,7 @@ function perform_full_scan($db) {
       continue;
     }
     $filePath = $file->getRealPath();
-    if ($uploads_path && strpos($filePath, $uploads_path) === 0) {
-      continue;
-    }
+
     if (preg_match('/\.(mp3|m4a|flac|ogg|wav)$/i', $filePath)) {
       $files_on_disk[$filePath] = $file->getMTime();
     }
@@ -1729,10 +1727,16 @@ function perform_full_scan($db) {
   echo "Step 5: Comparing disk files with database records...\n";
   $files_to_add = array_diff_key($files_on_disk, $db_files);
   $files_to_delete = array_diff_key($db_files, $files_on_disk);
-  $files_to_update = array_intersect_key($files_on_disk, $db_files);
+  $files_to_update = [];
+
+  foreach (array_intersect_key($files_on_disk, $db_files) as $filePath => $mtime) {
+    if ($mtime > $db_files[$filePath]) {
+      $files_to_update[$filePath] = $mtime;
+    }
+  }
 
   echo " - To add: " . count($files_to_add) . "\n";
-  echo " - To update (all existing): " . count($files_to_update) . "\n";
+  echo " - To update: " . count($files_to_update) . "\n";
   echo " - To delete: " . count($files_to_delete) . "\n\n";
 
   $files_to_process = $files_to_add + $files_to_update;
@@ -1742,9 +1746,10 @@ function perform_full_scan($db) {
 
   echo "Step 6: Processing changes...\n";
   $getID3 = new getID3;
-  $insert_stmt = $db->prepare("INSERT INTO music (user_id, file, title, artist, album, genre, year, duration, bitrate, image, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-  $update_stmt = $db->prepare("UPDATE music SET title=?, artist=?, album=?, genre=?, year=?, duration=?, bitrate=?, image=?, last_modified=? WHERE file=?");
+  $insert_stmt = $db->prepare("INSERT OR REPLACE INTO music (user_id, file, title, artist, album, genre, year, duration, bitrate, image, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   $delete_stmt = $db->prepare("DELETE FROM music WHERE file = ?");
+  $find_user_stmt = $db->prepare("SELECT id FROM users WHERE artist = ?");
+
   $processed_count = 0;
   $total_to_process = count($files_to_process) + count($files_to_delete);
 
@@ -1767,11 +1772,20 @@ function perform_full_scan($db) {
       $raw_image_data = $info['comments']['picture'][0]['data'] ?? null;
       $webp_image_data = process_image_to_webp($raw_image_data);
       
-      if (isset($files_to_add[$filePath])) {
-        $insert_stmt->execute([$library_user_id, $filePath, $title, $artist, $album, $genre, $year, $duration, $bitrate, $webp_image_data, $mtime]);
-      } else {
-        $update_stmt->execute([$title, $artist, $album, $genre, $year, $duration, $bitrate, $webp_image_data, $mtime, $filePath]);
+      $file_user_id = $library_user_id;
+      if (strpos($filePath, $uploads_path) === 0) {
+        $path_parts = explode(DIRECTORY_SEPARATOR, substr($filePath, strlen($uploads_path) + 1));
+        if (count($path_parts) > 1) {
+            $artist_dir_name = $path_parts[0];
+            $find_user_stmt->execute([$artist_dir_name]);
+            $found_user_id = $find_user_stmt->fetchColumn();
+            if ($found_user_id) {
+                $file_user_id = $found_user_id;
+            }
+        }
       }
+
+      $insert_stmt->execute([$file_user_id, $filePath, $title, $artist, $album, $genre, $year, $duration, $bitrate, $webp_image_data, $mtime]);
     }
 
     foreach ($files_to_delete as $filePath => $mtime) {
@@ -3500,6 +3514,9 @@ function perform_full_scan($db) {
               ghostClass: 'ghost',
               delay: 200,
               delayOnTouchOnly: true,
+              scroll: mainContent,
+              scrollSensitivity: 60,
+              scrollSpeed: 10,
               onEnd: async (evt) => {
                 const songItems = Array.from(songList.querySelectorAll('.song-item'));
                 const newOrderIds = songItems.map(item => item.dataset.songId);
