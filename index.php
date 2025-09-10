@@ -1964,6 +1964,10 @@ function perform_full_scan($db) {
         .song-item.history-item {
           grid-template-columns: 40px minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr) minmax(0, 2fr) 80px 40px;
         }
+        .song-item {
+          cursor: pointer;
+          border-radius: 0.5em;
+        }
       }
       .offcanvas-body .nav-link {
         padding: 0.75rem 1.5rem;
@@ -2076,14 +2080,9 @@ function perform_full_scan($db) {
         padding: 0.5rem 1rem;
         font-size: 0.9rem;
         color: var(--ytm-secondary-text);
-        border-bottom: 1px solid var(--ytm-surface-2);
       }
       .song-list-header {
         font-weight: 500;
-      }
-      .song-item {
-        cursor: pointer;
-        border-radius: 0;
       }
       .song-item.ghost {
         opacity: 0.4;
@@ -2649,6 +2648,13 @@ function perform_full_scan($db) {
           align-items: center;
           text-align: center;
         }
+        .song-list-header, .song-item {
+          border-bottom: 1px solid var(--ytm-surface-2);
+        }
+        .song-item {
+          cursor: pointer;
+          border-radius: 0;
+        }
       }
       .loader {
         text-align: center;
@@ -2868,7 +2874,7 @@ function perform_full_scan($db) {
                 </button>
             </div>
             <div class="input-group search-bar d-none d-md-flex">
-              <input type="text" class="form-control" id="search-input-desktop" placeholder="Search songs, albums, artists" aria-label="Search songs, albums, artists">
+              <input type="text" class="form-control" id="search-input-desktop" placeholder="Search..." aria-label="Search...">
               <button class="btn" type="button" id="search-btn-desktop"><i class="bi bi-search"></i></button>
             </div>
             <div class="dropdown logged-in-only d-none d-md-block">
@@ -3474,7 +3480,7 @@ function perform_full_scan($db) {
             const isHistory = currentView.type === 'get_history';
             const playedAtHTML = isHistory ? `<div class="played-at-text">${timeAgo(song.played_at)}</div>` : '';
             return `
-            <div class="song-item ${isNowPlaying ? 'now-playing' : ''} ${isHistory ? 'history-item' : ''}" 
+            <div class="song-item py-md-3 ${isNowPlaying ? 'now-playing' : ''} ${isHistory ? 'history-item' : ''}" 
               data-song-id="${song.id}" 
               data-is-favorite="${song.is_favorite == 1 ? '1' : '0'}"
               data-song-title="${escapeAttr(song.title)}"
