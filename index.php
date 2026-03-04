@@ -7,16 +7,21 @@ if (isset($_GET['pwa'])) {
     echo json_encode([
       "name" => "PHP Music",
       "short_name" => "Music",
-      "start_url" => ".",
+      "start_url" => "./",
       "display" => "standalone",
       "background_color" => "#030303",
       "theme_color" => "#121212",
       "description" => "A simple, fast music player with user accounts and uploads.",
       "icons" => [[
-          "src" => "?action=get_app_icon",
-          "sizes" => "any",
+          "src" => "?action=get_app_icon&size=192",
+          "sizes" => "192x192",
           "type" => "image/svg+xml",
-          "purpose" => "any"
+          "purpose" => "any maskable"
+        ],[
+          "src" => "?action=get_app_icon&size=512",
+          "sizes" => "512x512",
+          "type" => "image/svg+xml",
+          "purpose" => "any maskable"
         ]
       ]
     ]);
@@ -25,7 +30,7 @@ if (isset($_GET['pwa'])) {
   if ($_GET['pwa'] == 'sw') {
     header('Content-Type: application/javascript; charset=utf-8');
     echo <<<SW
-    const CACHE_NAME = 'php-music-cache-v21';
+    const CACHE_NAME = 'php-music-cache-v22';
     const STATIC_ASSETS =[
       './',
       'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
@@ -97,7 +102,7 @@ define('DAILY_UPLOAD_LIMIT', 10);
 
 function get_db() {
   try {
-    $db = new PDO('sqlite:' . DB_FILE, null, null, [PDO::ATTR_TIMEOUT => 30]);
+    $db = new PDO('sqlite:' . DB_FILE, null, null,[PDO::ATTR_TIMEOUT => 30]);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     return $db;
@@ -145,6 +150,15 @@ if (isset($_GET['access']) && $_GET['access'] === 'admin') {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A simple, fast music player with user accounts and uploads.">
+    <meta property="og:title" content="PHP Music Admin">
+    <meta property="og:description" content="A simple, fast music player with user accounts and uploads.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="?action=get_app_icon&size=512">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PHP Music">
+    <meta name="application-name" content="PHP Music">
     <title>Admin Panel - PHP Music</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -918,7 +932,7 @@ if (isset($_GET['action'])) {
       ];
       $order_by = $sort_map[$sort_key] ?? $sort_map['artist_asc'];
 
-      $where_clauses = [];
+      $where_clauses =[];
       $params =[$user_id];
 
       if (!empty($_GET['artist'])) {
@@ -1311,35 +1325,57 @@ if (isset($_GET['action'])) {
       $file_path = $stmt->fetchColumn();
       if ($file_path && file_exists($file_path)) {
         session_write_close();
+        while (ob_get_level()) { ob_end_clean(); }
         $filesize = filesize($file_path);
-        header('Content-Type: audio/mpeg');
+        
+        $mime_type = 'audio/mpeg';
+        $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+        switch ($ext) {
+          case 'flac': $mime_type = 'audio/flac'; break;
+          case 'ogg': $mime_type = 'audio/ogg'; break;
+          case 'wav': $mime_type = 'audio/wav'; break;
+          case 'm4a': $mime_type = 'audio/mp4'; break;
+        }
+
+        header('Content-Type: ' . $mime_type);
         header('Accept-Ranges: bytes');
         
+        $start = 0;
+        $end = $filesize - 1;
+        $length = $filesize;
+
         if (isset($_SERVER['HTTP_RANGE'])) {
           $range = $_SERVER['HTTP_RANGE'];
           $range = str_replace('bytes=', '', $range);
-          list($start, $end) = explode('-', $range, 2);
-          $start = intval($start);
-          if (!$end) {
-            $end = $filesize - 1;
-          } else {
-            $end = intval($end);
+          list($start_range, $end_range) = explode('-', $range, 2);
+          $start = intval($start_range);
+          if ($end_range !== '') {
+            $end = intval($end_range);
           }
           $length = $end - $start + 1;
-          
           header('HTTP/1.1 206 Partial Content');
-          header('Content-Length: ' . $length);
           header("Content-Range: bytes $start-$end/$filesize");
+        }
 
-          $f = @fopen($file_path, 'rb');
-          if ($f) {
-            fseek($f, $start);
-            echo fread($f, $length);
-            fclose($f);
+        header('Content-Length: ' . $length);
+
+        $f = @fopen($file_path, 'rb');
+        if ($f) {
+          fseek($f, $start);
+          $chunk_size = 1024 * 8;
+          $bytes_left = $length;
+          while ($bytes_left > 0 && !feof($f)) {
+            if (connection_aborted()) {
+              break;
+            }
+            $read_size = min($chunk_size, $bytes_left);
+            $data = fread($f, $read_size);
+            if ($data === false) break;
+            echo $data;
+            flush();
+            $bytes_left -= strlen($data);
           }
-        } else {
-          header('Content-Length: ' . $filesize);
-          readfile($file_path);
+          fclose($f);
         }
       } else {
         http_response_code(404);
@@ -1615,7 +1651,7 @@ if (isset($_GET['action'])) {
           WHERE m.genre IN ({$genre_placeholders}) AND m.id NOT IN (SELECT song_id FROM history WHERE user_id = ?)
           ORDER BY RANDOM() LIMIT 15
         ");
-        $genre_mix_stmt->execute(array_merge([$user_id], $top_genres, [$user_id]));
+        $genre_mix_stmt->execute(array_merge([$user_id], $top_genres,[$user_id]));
         $genre_songs = $genre_mix_stmt->fetchAll();
         if (count($genre_songs) > 0) {
           $shelves[] =['title' => 'Your Genre Mix', 'type' => 'songs', 'items' => $genre_songs];
@@ -1811,6 +1847,15 @@ function perform_full_scan($db) {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A simple, fast music player with user accounts and uploads.">
+    <meta property="og:title" content="PHP Music">
+    <meta property="og:description" content="A simple, fast music player with user accounts and uploads.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="?action=get_app_icon&size=512">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PHP Music">
+    <meta name="application-name" content="PHP Music">
     <title>PHP Music</title>
     <link rel="icon" type="image/svg+xml" href="?action=get_app_icon" />
     <meta name="theme-color" content="#121212"/>
@@ -4333,7 +4378,7 @@ function perform_full_scan($db) {
               queue = [...originalQueue];
               for (let i = queue.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [queue[i], queue[j]] = [queue[j], queue[i]];
+                [queue[i], queue[j]] =[queue[j], queue[i]];
               }
               const shuffledCurrentIndex = queue.findIndex(id => id === currentSongId);
               if (shuffledCurrentIndex > -1) {
@@ -4351,7 +4396,7 @@ function perform_full_scan($db) {
         const setQueueAndPlay = async (startId, view) => {
             const contextView = view || currentView;
             if (contextView.type === 'get_recommendations') {
-                const allShelfSongs = [...document.querySelectorAll('.shelf-item[data-song-id]')];
+                const allShelfSongs =[...document.querySelectorAll('.shelf-item[data-song-id]')];
                 const allSongIds = allShelfSongs.map(item => parseInt(item.dataset.songId));
                 originalQueue = allSongIds;
             } else {
@@ -4387,6 +4432,56 @@ function perform_full_scan($db) {
             const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
             if (offcanvas) offcanvas.hide();
           }
+        };
+
+        const setupHoldToSkip = (buttons, direction, defaultAction) => {
+          buttons.forEach(btn => {
+            let holdTimer = null;
+            let skipInterval = null;
+            let isHolding = false;
+
+            const startHold = (e) => {
+              if (e.type === 'touchstart') e.preventDefault();
+              isHolding = false;
+              holdTimer = setTimeout(() => {
+                isHolding = true;
+                skipInterval = setInterval(() => {
+                   if (!audio.duration || !isFinite(audio.duration)) return;
+                   const change = direction === 'next' ? 5 : -5;
+                   audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + change));
+                }, 200);
+              }, 400);
+            };
+
+            const endHold = (e) => {
+              if (e.type === 'touchend' || e.type === 'touchcancel') e.preventDefault();
+              if (holdTimer) clearTimeout(holdTimer);
+              if (skipInterval) clearInterval(skipInterval);
+              
+              if (!isHolding) {
+                defaultAction();
+              }
+              isHolding = false;
+            };
+
+            btn.addEventListener('mousedown', startHold);
+            btn.addEventListener('mouseup', endHold);
+            btn.addEventListener('mouseleave', () => {
+              if (holdTimer) clearTimeout(holdTimer);
+              if (skipInterval) clearInterval(skipInterval);
+            });
+
+            btn.addEventListener('touchstart', startHold, {passive: false});
+            btn.addEventListener('touchend', endHold, {passive: false});
+            btn.addEventListener('touchcancel', endHold, {passive: false});
+            
+            btn.addEventListener('keydown', (e) => {
+               if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  defaultAction();
+               }
+            });
+          });
         };
         
         allNavLinks.forEach(link => {
@@ -4447,8 +4542,8 @@ function perform_full_scan($db) {
         });
         
         playerElements.playPauseBtn.forEach(btn => btn.addEventListener('click', togglePlayPause));
-        playerElements.prevBtn.forEach(btn => btn.addEventListener('click', playPrev));
-        playerElements.nextBtn.forEach(btn => btn.addEventListener('click', playNext));
+        setupHoldToSkip(playerElements.prevBtn, 'prev', playPrev);
+        setupHoldToSkip(playerElements.nextBtn, 'next', playNext);
         playerElements.shuffleBtn.forEach(btn => btn.addEventListener('click', toggleShuffle));
         playerElements.repeatBtn.forEach(btn => btn.addEventListener('click', () => {
           repeatMode = (repeatMode === 'none') ? 'all' : (repeatMode === 'all') ? 'one' : 'none';
@@ -4975,7 +5070,7 @@ function perform_full_scan($db) {
         const songGenreInput = document.getElementById('song-genre');
         const startUploadBtn = document.getElementById('start-upload-btn');
         const uploadProgressArea = document.getElementById('upload-progress-area');
-        let filesToUpload = [];
+        let filesToUpload =[];
 
         songFilesInput.addEventListener('change', () => { filesToUpload = Array.from(songFilesInput.files); });
         
@@ -5089,10 +5184,56 @@ function perform_full_scan($db) {
           updateUIForAuthState();
         }
 
+        const injectMetaTags = () => {
+          const metaTags =[
+            { name: 'description', content: 'A simple, fast music player with user accounts, streaming, and offline PWA capabilities.' },
+            { name: 'keywords', content: 'music, player, php, streaming, audio, webapp' },
+            { name: 'author', content: 'PHP Music' },
+            { name: 'apple-mobile-web-app-capable', content: 'yes' },
+            { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+            { name: 'apple-mobile-web-app-title', content: 'PHP Music' },
+            { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' },
+            { property: 'og:title', content: 'PHP Music Player' },
+            { property: 'og:description', content: 'Listen to your favorite music anywhere.' },
+            { property: 'og:type', content: 'website' }
+          ];
+          metaTags.forEach(tag => {
+            const meta = document.createElement('meta');
+            Object.keys(tag).forEach(key => meta.setAttribute(key, tag[key]));
+            document.head.appendChild(meta);
+          });
+        };
+
         const init = async () => {
+          injectMetaTags();
+          
+          audio.preload = 'auto';
+          
+          audio.addEventListener('stalled', () => {
+             if (isPlaying && audio.readyState < 3) {
+                const currentPos = audio.currentTime;
+                audio.load();
+                audio.currentTime = currentPos;
+                audio.play();
+             }
+          });
+          
+          audio.addEventListener('error', (e) => {
+            console.error('Audio playback error or interrupted stream:', e);
+            if (isPlaying && currentSong) {
+               const currentPos = audio.currentTime;
+               setTimeout(() => {
+                 audio.load();
+                 audio.currentTime = currentPos;
+                 audio.play();
+               }, 1500);
+            }
+          });
+
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('?pwa=sw').catch(err => console.error('SW registration failed:', err));
           }
+          
           playerElements.prevBtn.forEach(b => b.innerHTML = ICONS.prev);
           playerElements.nextBtn.forEach(b => b.innerHTML = ICONS.next);
           playerElements.shuffleBtn.forEach(b => b.innerHTML = ICONS.shuffle);
