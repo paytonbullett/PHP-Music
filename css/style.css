@@ -1,0 +1,9 @@
+/* css/style.css */
+
+:root {
+  --ytm-bg: #030303;
+  --ytm-surface: #121212;
+  /* ... etc. all the way to the end */
+}
+
+/* ... all other CSS rules ... */
