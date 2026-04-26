@@ -2823,11 +2823,15 @@ function perform_full_scan($db) {
     <div class="app-container">
       <nav class="sidebar offcanvas-md offcanvas-start" tabindex="-1" id="main-nav-offcanvas">
         <div class="offcanvas-header">
-          <div class="logo">PHP<span>Music</span></div>
+          <div class="logo">
+            <img src="https://static.bullettsocial.space/logos/web/primary/bullett-logo-white.png" alt="Bullett Music" style="height: 32px; width: auto;">
+          </div>
           <button type="button" class="btn-close btn-close" data-bs-dismiss="offcanvas" data-bs-target="#main-nav-offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
-          <div class="logo d-none d-md-block">PHP<span>Music</span></div>
+          <div class="logo d-none d-md-block">
+            <img src="https://static.bullettsocial.space/logos/web/primary/bullett-logo-white.png" alt="Bullett Music" style="height: 32px; width: auto;">
+          </div>
           
           <a href="#" class="nav-link active" data-view="get_songs">
             <i class="bi bi-music-note-list"></i>
