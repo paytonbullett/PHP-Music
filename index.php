@@ -5,7 +5,7 @@ if (isset($_GET['pwa'])) {
   if ($_GET['pwa'] == 'manifest') {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-      "name" => "PHP Music",
+      "name" => "Bullett Music",
       "short_name" => "Music",
       "start_url" => "./",
       "display" => "standalone",
@@ -30,7 +30,7 @@ if (isset($_GET['pwa'])) {
   if ($_GET['pwa'] == 'sw') {
     header('Content-Type: application/javascript; charset=utf-8');
     echo <<<SW
-    const CACHE_NAME = 'php-music-cache-v22';
+    const CACHE_NAME = 'bullett-music-cache-v1';
     const STATIC_ASSETS =[
       './',
       'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
@@ -151,26 +151,26 @@ if (isset($_GET['access']) && $_GET['access'] === 'admin') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A simple, fast music player with user accounts and uploads.">
-    <meta property="og:title" content="PHP Music Admin">
+    <meta property="og:title" content="Bullett Music Admin">
     <meta property="og:description" content="A simple, fast music player with user accounts and uploads.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="?action=get_app_icon&size=512">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="PHP Music">
-    <meta name="application-name" content="PHP Music">
-    <title>Admin Panel - PHP Music</title>
+    <meta name="apple-mobile-web-app-title" content="Bullett Music">
+    <meta name="application-name" content="Bullett Music">
+    <title>Admin Panel - Bullett Music</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --ytm-bg: #030303;
-        --ytm-surface: #121212;
-        --ytm-surface-2: #282828;
-        --ytm-primary-text: #ffffff;
-        --ytm-secondary-text: #aaaaaa;
-        --ytm-accent: #ff0000;
+        --ytm-bg: #ffffff;
+        --ytm-surface: #f5f5f5;
+        --ytm-surface-2: #e0e0e0;
+        --ytm-primary-text: #000000;
+        --ytm-secondary-text: #555555;
+        --ytm-accent: #000000;
       }
       body {
         background-color: var(--ytm-bg);
@@ -1565,7 +1565,7 @@ if (isset($_GET['action'])) {
           if ($db->inTransaction()) {
             $db->rollBack();
           }
-          error_log('PHP Music log_play error: ' . $e->getMessage());
+          error_log('Bullett Music log_play error: ' . $e->getMessage());
         }
       }
       send_json(['status' => 'success']);
@@ -1720,7 +1720,7 @@ function perform_full_scan($db) {
   header('Content-Type: text/plain; charset=utf-8');
   ob_implicit_flush();
 
-  echo "PHP Music Library - Full Scan\n";
+  echo "Bullett Music Library - Full Scan\n";
   echo "===================================\n\n";
 
   if (!class_exists('getID3')) {
@@ -1848,17 +1848,17 @@ function perform_full_scan($db) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A simple, fast music player with user accounts and uploads.">
-    <meta property="og:title" content="PHP Music">
+    <meta property="og:title" content="Bullett Music">
     <meta property="og:description" content="A simple, fast music player with user accounts and uploads.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="?action=get_app_icon&size=512">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="PHP Music">
-    <meta name="application-name" content="PHP Music">
-    <title>PHP Music</title>
+    <meta name="apple-mobile-web-app-title" content="Bullett Music">
+    <meta name="application-name" content="Bullett Music">
+    <title>Bullett Music</title>
     <link rel="icon" type="image/svg+xml" href="?action=get_app_icon" />
-    <meta name="theme-color" content="#121212"/>
+    <meta name="theme-color" content="#ffffff"/>
     <link rel="manifest" href="?pwa=manifest">
     <script>
       (function() {
@@ -1913,12 +1913,12 @@ function perform_full_scan($db) {
     <?php echo $initialViewJS; ?>
     <style>
       :root {
-        --ytm-bg: #030303;
-        --ytm-surface: #121212;
-        --ytm-surface-2: #282828;
-        --ytm-primary-text: #ffffff;
-        --ytm-secondary-text: #aaaaaa;
-        --ytm-accent: #ff0000;
+        --ytm-bg: #ffffff;
+        --ytm-surface: #f5f5f5;
+        --ytm-surface-2: #e0e0e0;
+        --ytm-primary-text: #000000;
+        --ytm-secondary-text: #555555;
+        --ytm-accent: #000000;
         --header-height-mobile: 64px;
       }
       html, body {
@@ -2463,7 +2463,7 @@ function perform_full_scan($db) {
       .form-control::placeholder {
         color: var(--ytm-secondary-text);
       }
-      .dropdown-menu-dark {
+      .dropdown-menu-light {
         background-color: var(--ytm-surface-2);
       }
       #upload-progress-area .progress {
@@ -2824,7 +2824,7 @@ function perform_full_scan($db) {
       <nav class="sidebar offcanvas-md offcanvas-start" tabindex="-1" id="main-nav-offcanvas">
         <div class="offcanvas-header">
           <div class="logo">PHP<span>Music</span></div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#main-nav-offcanvas" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close" data-bs-dismiss="offcanvas" data-bs-target="#main-nav-offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
           <div class="logo d-none d-md-block">PHP<span>Music</span></div>
@@ -2914,7 +2914,7 @@ function perform_full_scan($db) {
           </div>
           <div class="dropdown logged-in-only">
             <img src="" class="profile-picture" id="profile-picture-header-mobile" alt="Profile" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
-            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+            <ul class="dropdown-menu dropdown-menu-light dropdown-menu-end">
               <li><a class="dropdown-item" href="#" id="profile-dropdown-profile-mobile"><i class="bi bi-person-fill me-2"></i>My Profile</a></li>
               <li><a class="dropdown-item" href="#" id="profile-dropdown-stats-mobile"><i class="bi bi-bar-chart-line-fill me-2"></i>Statistics</a></li>
               <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settings-modal"><i class="bi bi-gear-fill me-2"></i>Settings</a></li>
@@ -2941,7 +2941,7 @@ function perform_full_scan($db) {
             </div>
             <div class="dropdown logged-in-only d-none d-md-block">
               <img src="" class="profile-picture" id="profile-picture-header-desktop" alt="Profile" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
-              <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+              <ul class="dropdown-menu dropdown-menu-light dropdown-menu-end">
                 <li><a class="dropdown-item" href="#" id="profile-dropdown-profile-desktop"><i class="bi bi-person-fill me-2"></i>My Profile</a></li>
                 <li><a class="dropdown-item" href="#" id="profile-dropdown-stats-desktop"><i class="bi bi-bar-chart-line-fill me-2"></i>Statistics</a></li>
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settings-modal"><i class="bi bi-gear-fill me-2"></i>Settings</a></li>
@@ -3057,7 +3057,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Login</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <form id="login-form">
@@ -3080,7 +3080,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Register</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <form id="register-form">
@@ -3107,7 +3107,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Settings</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <h6>Profile Picture</h6>
@@ -3137,7 +3137,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Upload Music</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">
@@ -3163,7 +3163,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">All Genres</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body" id="genres-modal-body">
             <div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
@@ -3176,7 +3176,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Create New Playlist</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <form id="create-playlist-form">
@@ -3195,7 +3195,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Edit Playlist</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <form id="edit-playlist-form">
@@ -3215,7 +3215,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Add to Playlist</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body" id="add-to-playlist-modal-body">
           </div>
@@ -3227,7 +3227,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Song Metadata</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body" id="metadata-modal-body">
           </div>
@@ -3239,7 +3239,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title" id="share-modal-title">Share</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <p class="text-secondary text-center mb-4" id="share-modal-text">Share this with your friends!</p>
@@ -3263,7 +3263,7 @@ function perform_full_scan($db) {
         <div class="modal-content">
           <div class="modal-header border-0">
             <h5 class="modal-title">Full Library Scan Log</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body p-0">
             <iframe id="full-scan-iframe" src="about:blank" style="width: 100%; height: 60vh; border: none; background-color: #030303;"></iframe>
@@ -3435,7 +3435,7 @@ function perform_full_scan($db) {
           toastEl.setAttribute('role', 'alert');
           toastEl.setAttribute('aria-live', 'assertive');
           toastEl.setAttribute('aria-atomic', 'true');
-          toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+          toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
           
           document.body.appendChild(toastContainer);
           toastContainer.appendChild(toastEl);
@@ -3467,10 +3467,10 @@ function perform_full_scan($db) {
           try {
             const decodedText = decodeURIComponent(text.replace(/\+/g, ' '));
             contentTitle.textContent = decodedText;
-            document.title = decodedText + ' - PHP Music';
+            document.title = decodedText + ' - Bullett Music';
           } catch (e) {
             contentTitle.textContent = text;
-            document.title = text + ' - PHP Music';
+            document.title = text + ' - Bullett Music';
           }
         };
         
@@ -4222,9 +4222,9 @@ function perform_full_scan($db) {
           shareUrlInput.value = shareUrl;
 
           document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-          document.getElementById('share-twitter').href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Check out ${decodedName} on PHP Music`)}`;
-          document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${decodedName} on PHP Music: ${shareUrl}`)}`;
-          document.getElementById('share-telegram').href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Check out ${decodedName} on PHP Music`)}`;
+          document.getElementById('share-twitter').href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Check out ${decodedName} on Bullett Music`)}`;
+          document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${decodedName} on Bullett Music: ${shareUrl}`)}`;
+          document.getElementById('share-telegram').href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Check out ${decodedName} on Bullett Music`)}`;
           
           copyShareUrlBtn.textContent = 'Copy';
           copyShareUrlBtn.disabled = false;
@@ -5188,12 +5188,12 @@ function perform_full_scan($db) {
           const metaTags =[
             { name: 'description', content: 'A simple, fast music player with user accounts, streaming, and offline PWA capabilities.' },
             { name: 'keywords', content: 'music, player, php, streaming, audio, webapp' },
-            { name: 'author', content: 'PHP Music' },
+            { name: 'author', content: 'Bullett Music' },
             { name: 'apple-mobile-web-app-capable', content: 'yes' },
             { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-            { name: 'apple-mobile-web-app-title', content: 'PHP Music' },
+            { name: 'apple-mobile-web-app-title', content: 'Bullett Music' },
             { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' },
-            { property: 'og:title', content: 'PHP Music Player' },
+            { property: 'og:title', content: 'Bullett Music Player' },
             { property: 'og:description', content: 'Listen to your favorite music anywhere.' },
             { property: 'og:type', content: 'website' }
           ];
