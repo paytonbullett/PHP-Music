@@ -91,20 +91,40 @@ header('Content-Type: text/html; charset=utf-8');
 session_start();
 set_time_limit(0);
 
+require_once __DIR__ . '/config.php';
+
 define('MUSIC_DIR', __DIR__);
-define('DB_FILE', __DIR__ . '/music.db');
-define('APP_VERSION', '1.8');
-define('PAGE_SIZE', 25);
-define('ADMIN_PAGE_SIZE', 20);
-define('ADMIN_PASSWORD', 'admin');
 define('ADMIN_PASSWORD_HASH', password_hash(ADMIN_PASSWORD, PASSWORD_DEFAULT));
-define('DAILY_UPLOAD_LIMIT', 10);
 
 function get_db() {
   try {
-    $db = new PDO('sqlite:' . DB_FILE, null, null,[PDO::ATTR_TIMEOUT => 30]);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    switch (DB_TYPE) {
+      case 'mysql':
+        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+        $db = new PDO($dsn, DB_USER, DB_PASS, [
+          PDO::ATTR_TIMEOUT => 30,
+          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+          PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+        break;
+        
+      case 'pgsql':
+        $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
+        $db = new PDO($dsn, DB_USER, DB_PASS, [
+          PDO::ATTR_TIMEOUT => 30,
+          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        break;
+        
+      case 'sqlite':
+      default:
+        $db = new PDO('sqlite:' . DB_FILE, null, null, [PDO::ATTR_TIMEOUT => 30]);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        break;
+    }
     return $db;
   } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
@@ -184,8 +204,9 @@ if (isset($_GET['access']) && $_GET['access'] === 'admin') {
       }
       .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
       .content-area-wrapper { padding: 1.5rem 2rem; }
-      .sidebar .logo { font-size: 1.5rem; font-weight: 700; padding: 0 1.5rem 1.5rem 1.5rem; }
-      .sidebar .logo span { color: var(--ytm-accent); }
+      .sidebar .logo { padding: 0 1.5rem 1.5rem 1.5rem; }
+      .sidebar .logo svg,
+      .sidebar .logo img { width: auto; height: 32px; max-width: 100%; display: block; }      
       .nav-link {
         color: var(--ytm-secondary-text); display: flex; align-items: center;
         font-weight: 500; border-left: 3px solid transparent; gap: 1rem;
@@ -232,7 +253,9 @@ if (isset($_GET['access']) && $_GET['access'] === 'admin') {
           width: 100%; flex-direction: row; justify-content: space-between;
           align-items: center; padding: 0.5rem 1rem; height: 60px;
         }
-        .sidebar .logo { padding: 0; font-size: 1.25rem; }
+        .sidebar .logo { padding: 0; }
+        .sidebar .logo svg,
+        .sidebar .logo img { height: 28px; }
         .sidebar .nav-link { padding: 0.5rem; }
         .sidebar .nav-link span { display: none; }
         .main-content { overflow-y: visible; }
@@ -448,10 +471,22 @@ if (isset($_GET['share_type']) && isset($_GET['id'])) {
 }
 
 function init_db($db) {
-  $db->exec("PRAGMA journal_mode=WAL;");
-  $db->exec("PRAGMA foreign_keys = ON;");
-
-  $users_columns = $db->query("PRAGMA table_info(users);")->fetchAll(PDO::FETCH_COLUMN, 1);
+  if (DB_TYPE === 'sqlite') {
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA foreign_keys = ON;");
+    $users_columns = $db->query("PRAGMA table_info(users);")->fetchAll(PDO::FETCH_COLUMN, 1);
+  } else {
+    $db->exec("SET NAMES " . DB_CHARSET . ";");
+    $db->exec("SET FOREIGN_KEY_CHECKS = 1;");
+    // For MySQL, check if table exists instead of PRAGMA
+    $users_columns = [];
+    try {
+      $stmt = $db->query("SHOW COLUMNS FROM users");
+      $users_columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+      // Table doesn't exist yet
+    }
+  }
   $users_table_exists = !empty($users_columns);
 
   $db->exec("
@@ -486,7 +521,17 @@ function init_db($db) {
     }
   }
 
-  $music_columns = $db->query("PRAGMA table_info(music);")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (DB_TYPE === 'sqlite') {
+    $music_columns = $db->query("PRAGMA table_info(music);")->fetchAll(PDO::FETCH_COLUMN, 1);
+  } else {
+    $music_columns = [];
+    try {
+      $stmt = $db->query("SHOW COLUMNS FROM music");
+      $music_columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+      // Table doesn't exist yet
+    }
+  }
   $music_table_exists = !empty($music_columns);
   
   $db->exec("
@@ -1552,13 +1597,22 @@ if (isset($_GET['action'])) {
     
           $db->prepare("DELETE FROM history WHERE user_id = ? AND song_id = ?")->execute([$user_id, $song_id]);
           $db->prepare("INSERT INTO history (user_id, song_id, played_at) VALUES (?, ?, ?)")->execute([$user_id, $song_id, $played_at_iso]);
-    
-          $db->prepare("
-            INSERT INTO play_counts (user_id, song_id, play_count, last_played) VALUES (?, ?, 1, ?)
-            ON CONFLICT(user_id, song_id) DO UPDATE SET
-              play_count = play_count + 1,
-              last_played = ?
-          ")->execute([$user_id, $song_id, $played_at_iso, $played_at_iso]);
+              if (DB_TYPE === 'sqlite') {
+            $db->prepare("
+              INSERT INTO play_counts (user_id, song_id, play_count, last_played) VALUES (?, ?, 1, ?)
+              ON CONFLICT(user_id, song_id) DO UPDATE SET
+                play_count = play_count + 1,
+                last_played = ?
+            ")->execute([$user_id, $song_id, $played_at_iso, $played_at_iso]);
+          } else {
+            // MySQL uses ON DUPLICATE KEY UPDATE
+            $db->prepare("
+              INSERT INTO play_counts (user_id, song_id, play_count, last_played) VALUES (?, ?, 1, ?)
+              ON DUPLICATE KEY UPDATE
+                play_count = play_count + 1,
+                last_played = ?
+            ")->execute([$user_id, $song_id, $played_at_iso, $played_at_iso]);
+          }
           
           $db->commit();
         } catch (Exception $e) {
@@ -2035,13 +2089,15 @@ function perform_full_scan($db) {
         padding: 0.75rem 1.5rem;
       }
       .sidebar .logo {
-        font-size: 1.5rem;
-        font-weight: 700;
         padding: 0 1.5rem 1.5rem 1.5rem;
       }
-      .sidebar .logo span {
-        color: var(--ytm-accent);
-      }
+      .sidebar .logo svg,
+      .sidebar .logo img {
+        width: auto;
+        height: 32px;
+        max-width: 100%;
+        display: block;
+      }      
       .nav-link {
         color: var(--ytm-secondary-text);
         display: flex;
